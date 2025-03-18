@@ -57,5 +57,35 @@ class TwoFactorAuth {
 
         return false;
     }
+
+    // Function to activate 2FA
+    public function activate2FA($userId, $method, $secret = null) {
+        $query = "SELECT email_verified FROM users WHERE id = :userId";
+        $result = $this->db->fetch($query, ['userId' => $userId]);
+
+        if (!$result || !$result['email_verified']) {
+            throw new Exception("Email must be verified before activating 2FA.");
+        }
+
+        $query = "UPDATE users SET 2fa_enabled = 1, 2fa_method = :method, 2fa_secret = :secret WHERE id = :userId";
+        $this->db->executeQuery($query, [
+            'method' => $method,
+            'secret' => $secret,
+            'userId' => $userId
+        ]);
+    }
+
+    // Function to deactivate 2FA
+    public function deactivate2FA($userId) {
+        $query = "UPDATE users SET 2fa_enabled = 0, 2fa_method = NULL, 2fa_secret = NULL WHERE id = :userId";
+        $this->db->executeQuery($query, ['userId' => $userId]);
+    }
+
+    // Function to check if 2FA is enabled
+    public function is2FAEnabled($userId) {
+        $query = "SELECT 2fa_enabled FROM users WHERE id = :userId";
+        $result = $this->db->fetch($query, ['userId' => $userId]);
+        return $result && $result['2fa_enabled'];
+    }
 }
 ?>

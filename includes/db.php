@@ -1,47 +1,39 @@
 <?php
-// Database connection using PDO
 class Database {
-    private $host = 'localhost';
-    private $db_name = 'myDressing';
-    private $username = 'root';
-    private $password = '';
-    private $conn;
+    private $pdo;
 
-    // Get the database connection
-    public function getConnection() {
-        $this->conn = null;
+    public function __construct() {
+        $host = 'db';
+        $dbname = 'myDressing';
+        $username = 'root';
+        $password = 'KGUYGjhkbjgiuyfTYu!';
+        $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
 
         try {
-            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch(PDOException $exception) {
-            echo "Connection error: " . $exception->getMessage();
+            $this->pdo = new PDO($dsn, $username, $password, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]);
+        } catch (PDOException $e) {
+            die("Database connection failed: " . $e->getMessage());
         }
-
-        return $this->conn;
     }
 
-    // Function to execute a query with prepared statements
     public function executeQuery($query, $params = []) {
-        try {
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute($params);
-            return $stmt;
-        } catch(PDOException $exception) {
-            echo "Query error: " . $exception->getMessage();
-        }
+        $stmt = $this->pdo->prepare($query);
+        return $stmt->execute($params);
     }
 
-    // Function to fetch all results from a query
-    public function fetchAll($query, $params = []) {
-        $stmt = $this->executeQuery($query, $params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Function to fetch a single result from a query
     public function fetch($query, $params = []) {
-        $stmt = $this->executeQuery($query, $params);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetch();
+    }
+
+    public function fetchAll($query, $params = []) {
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 }
 ?>

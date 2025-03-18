@@ -2,30 +2,25 @@
 require_once 'db.php';
 
 class Upload {
-    private $db;
-    private $uploadDir = '/media/pictures/';
-
-    public function __construct() {
-        $this->db = new Database();
-    }
-
-    // Function to handle photo uploads
-    public function uploadPhoto($article_id, $file) {
+    public static function uploadPhoto($file, $articleId) {
+        $targetDir = __DIR__ . '/../media/pictures/';
         $timestamp = date('ymdHis');
-        $originalName = pathinfo($file['name'], PATHINFO_FILENAME);
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $newFileName = $timestamp . '_' . $originalName . '.' . $extension;
-        $targetPath = $_SERVER['DOCUMENT_ROOT'] . $this->uploadDir . $newFileName;
+        $originalName = basename($file['name']);
+        $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+        $newName = "{$timestamp}_{$originalName}";
+        $targetFile = $targetDir . $newName;
 
-        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-            $query = "INSERT INTO article_photos (article_id, photo_name, created_at) VALUES (:article_id, :photo_name, NOW())";
-            return $this->db->executeQuery($query, [
-                'article_id' => $article_id,
-                'photo_name' => $newFileName
+        if (move_uploaded_file($file['tmp_name'], $targetFile)) {
+            $db = new Database();
+            $query = "INSERT INTO article_photos (article_id, photo_name, created_at) VALUES (:articleId, :photoName, NOW())";
+            $db->executeQuery($query, [
+                'articleId' => $articleId,
+                'photoName' => $newName
             ]);
+            return $newName;
         }
 
-        return false;
+        throw new Exception("Failed to upload photo.");
     }
 }
 ?>

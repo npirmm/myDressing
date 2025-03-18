@@ -8,41 +8,40 @@ class Logs {
         $this->db = new Database();
     }
 
-    // Function to add a log entry
-    public function addLog($user_id, $action, $details) {
-        $query = "INSERT INTO logs (user_id, action, details, created_at) VALUES (:user_id, :action, :details, NOW())";
-        return $this->db->executeQuery($query, [
-            'user_id' => $user_id,
+    public function logAction($userId, $action, $details = null) {
+        $query = "INSERT INTO logs (user_id, action, details, created_at) VALUES (:userId, :action, :details, NOW())";
+        $this->db->executeQuery($query, [
+            'userId' => $userId,
             'action' => $action,
             'details' => $details
         ]);
     }
 
-    // Function to retrieve all logs
-    public function getAllLogs() {
-        $query = "SELECT * FROM logs ORDER BY created_at DESC";
-        return $this->db->fetchAll($query);
-    }
+    public function getLogs($filters = []) {
+        $query = "SELECT * FROM logs WHERE 1=1";
+        $params = [];
 
-    // Function to retrieve logs by user
-    public function getLogsByUser($user_id) {
-        $query = "SELECT * FROM logs WHERE user_id = :user_id ORDER BY created_at DESC";
-        return $this->db->fetchAll($query, ['user_id' => $user_id]);
-    }
+        if (isset($filters['user_id'])) {
+            $query .= " AND user_id = :userId";
+            $params['userId'] = $filters['user_id'];
+        }
 
-    // Function to retrieve logs by action
-    public function getLogsByAction($action) {
-        $query = "SELECT * FROM logs WHERE action = :action ORDER BY created_at DESC";
-        return $this->db->fetchAll($query, ['action' => $action]);
-    }
+        if (isset($filters['action'])) {
+            $query .= " AND action = :action";
+            $params['action'] = $filters['action'];
+        }
 
-    // Function to retrieve logs by date range
-    public function getLogsByDateRange($start_date, $end_date) {
-        $query = "SELECT * FROM logs WHERE created_at BETWEEN :start_date AND :end_date ORDER BY created_at DESC";
-        return $this->db->fetchAll($query, [
-            'start_date' => $start_date,
-            'end_date' => $end_date
-        ]);
+        if (isset($filters['date_from'])) {
+            $query .= " AND created_at >= :dateFrom";
+            $params['dateFrom'] = $filters['date_from'];
+        }
+
+        if (isset($filters['date_to'])) {
+            $query .= " AND created_at <= :dateTo";
+            $params['dateTo'] = $filters['date_to'];
+        }
+
+        return $this->db->fetchAll($query, $params);
     }
 }
 ?>

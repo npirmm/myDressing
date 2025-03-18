@@ -8,12 +8,15 @@ class Auth {
         $this->db = new Database();
     }
 
-    // User login function
-    public function login($identifier, $password) {
-        $query = "SELECT * FROM users WHERE email = :identifier OR username = :identifier";
-        $user = $this->db->fetch($query, ['identifier' => $identifier]);
+    public function login($usernameOrEmail, $password) {
+        $query = "SELECT id, password, role FROM users WHERE username = :username OR email = :email";
+        $user = $this->db->fetch($query, [
+            'username' => $usernameOrEmail,
+            'email' => $usernameOrEmail
+        ]);
 
         if ($user && password_verify($password, $user['password'])) {
+            session_start();
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
             return true;
@@ -22,9 +25,13 @@ class Auth {
         return false;
     }
 
-    // User logout function
+    public function checkRole($requiredRole) {
+        session_start();
+        return isset($_SESSION['role']) && $_SESSION['role'] === $requiredRole;
+    }
+
     public function logout() {
-        session_unset();
+        session_start();
         session_destroy();
     }
 
