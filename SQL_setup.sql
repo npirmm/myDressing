@@ -4,8 +4,8 @@ USE myDressing;
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE, -- Ajout de la contrainte UNIQUE ici
+    email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'standard', 'viewer') NOT NULL,
     2fa_enabled BOOLEAN DEFAULT FALSE,
