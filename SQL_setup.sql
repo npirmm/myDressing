@@ -12,7 +12,9 @@ CREATE TABLE users (
     2fa_method ENUM('otp', 'email') DEFAULT NULL,
     2fa_secret VARCHAR(255) DEFAULT NULL,
     email_verified BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (username),
+    UNIQUE (email)
 );
 
 CREATE TABLE logs (

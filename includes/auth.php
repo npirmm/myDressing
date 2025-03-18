@@ -37,6 +37,17 @@ class Auth {
 
     // User registration function
     public function register($username, $email, $password, $role = 'standard') {
+        // Check if username or email already exists
+        $query = "SELECT COUNT(*) FROM users WHERE username = :username OR email = :email";
+        $exists = $this->db->fetch($query, [
+            'username' => $username,
+            'email' => $email
+        ]);
+
+        if ($exists['COUNT(*)'] > 0) {
+            throw new Exception("Username or email already exists.");
+        }
+
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $query = "INSERT INTO users (username, email, password, role, created_at) VALUES (:username, :email, :password, :role, NOW())";
         return $this->db->executeQuery($query, [

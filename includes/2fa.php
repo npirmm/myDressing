@@ -43,7 +43,7 @@ class TwoFactorAuth {
             return true;
         }
 
-        return false;
+        throw new Exception("Failed to send email.");
     }
 
     // Function to verify email code

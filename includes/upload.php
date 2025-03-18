@@ -10,6 +10,12 @@ class Upload {
         $newName = "{$timestamp}_{$originalName}";
         $targetFile = $targetDir . $newName;
 
+        // Check file type
+        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
+        if (!in_array(strtolower($extension), $allowedTypes)) {
+            throw new Exception("Invalid file type. Only JPG, JPEG, PNG, and GIF are allowed.");
+        }
+
         if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             $db = new Database();
             $query = "INSERT INTO article_photos (article_id, photo_name, created_at) VALUES (:articleId, :photoName, NOW())";
