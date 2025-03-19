@@ -1,29 +1,28 @@
 <?php
 require_once 'db.php';
 
+$db = new Database();
+
 // Ajouter un article
 function addArticle($data) {
-    global $pdo;
-    $sql = "INSERT INTO articles (name, short_description, long_description, category_id, brand_id, size, weight, status, condition, storage_location_id, storage_shelf, storage_id, purchase_date, purchase_price, supplier_id, clean_instructions, notes, rating, favorite, created_by, owner_id) 
+    global $db;
+    $sql = "INSERT INTO articles (name, short_description, long_description, category_id, brand_id, size, weight, status, `condition`, storage_location_id, storage_shelf, storage_id, purchase_date, purchase_price, supplier_id, clean_instructions, notes, rating, favorite, created_by, owner_id) 
             VALUES (:name, :short_description, :long_description, :category_id, :brand_id, :size, :weight, :status, :condition, :storage_location_id, :storage_shelf, :storage_id, :purchase_date, :purchase_price, :supplier_id, :clean_instructions, :notes, :rating, :favorite, :created_by, :owner_id)";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($data);
-    return $pdo->lastInsertId();
+    $db->executeQuery($sql, $data);
+    return $db->fetch("SELECT LAST_INSERT_ID() AS id")['id'];
 }
 
 // Récupérer tous les articles
 function getArticles() {
-    global $pdo;
+    global $db;
     $sql = "SELECT * FROM articles";
-    $stmt = $pdo->query($sql);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return $db->fetchAll($sql);
 }
 
 // Supprimer un article
 function deleteArticle($id) {
-    global $pdo;
+    global $db;
     $sql = "DELETE FROM articles WHERE id = :id";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['id' => $id]);
+    $db->executeQuery($sql, ['id' => $id]);
 }
 ?>
