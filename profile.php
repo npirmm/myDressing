@@ -1,7 +1,6 @@
 <?php
 require_once 'includes/db.php';
 require_once 'includes/auth.php';
-require_once 'includes/2fa.php';
 require_once 'includes/otp.php';
 
 session_start();
@@ -13,7 +12,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $db = new Database();
 $auth = new Auth();
-$twoFactorAuth = new TwoFactorAuth();
 $otp = new OTP();
 
 $user_id = $_SESSION['user_id'];
@@ -72,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['test_otp'])) {
         $enteredCode = $_POST['otp_code'];
-        $isValid = $twoFactorAuth->verifyOTP($user['2fa_secret'], $enteredCode);
+        $isValid = $otp->verifyCode($user['2fa_secret'], $enteredCode);
         if ($isValid) {
             echo '<p class="text-success">OTP is valid!</p>';
         } else {
@@ -87,7 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
