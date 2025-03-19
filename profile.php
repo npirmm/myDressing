@@ -136,8 +136,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <option value="email" <?php echo $user['2fa_method'] === 'email' ? 'selected' : ''; ?>>Email</option>
                         </select>
                     </div>
-                    <button type="submit" name="enable_2fa" class="btn btn-primary">Enable 2FA</button>
-                    <button type="submit" name="disable_2fa" class="btn btn-danger">Disable 2FA</button>
+                    <button type="submit" name="enable_2fa" class="btn btn-primary" 
+                        <?php echo $is2FAEnabled ? 'disabled' : ''; ?>>Enable 2FA</button>
+                    <button type="submit" name="disable_2fa" class="btn btn-danger" 
+                        <?php echo !$is2FAEnabled ? 'disabled' : ''; ?>>Disable 2FA</button>
                 </form>
                 <div>
                     <h3>Two-Factor Authentication (2FA)</h3>
@@ -146,22 +148,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="checkbox" disabled <?= $is2FAEnabled ? 'checked' : '' ?>>
                     </label>
                     <?php if (!$is2FAEnabled): ?>
+                        <h6>OTP Secret</h6>
+                        <p><strong><?php echo htmlspecialchars($otpSecret); ?></strong></p>
+                        <h6>OTP QR Code</h6>
                         <p>Scan this QR code to enable 2FA:</p>
-                        <img src="<?= $qrCodeUrl ?>" alt="QR Code">
+                        <img src="<?= htmlspecialchars($qrCodeUrl); ?>" alt="QR Code">
                     <?php else: ?>
                         <p>2FA is enabled for your account.</p>
                     <?php endif; ?>
                 </div>
                 <?php if ($user['2fa_method'] === 'otp' && $user['2fa_secret']): ?>
                     <div class="mt-4">
-                        <h6>OTP Secret</h6>
-                        <?php if (!$is2FAEnabled): ?>
-                            <p><strong><?php echo $user['2fa_secret']; ?></strong></p>
-                        <?php endif; ?>
-                        <h6>OTP QR Code</h6>
-                        <?php if ($qrCodeImage): ?>
-                            <img src="<?php echo $qrCodeImage; ?>" alt="QR Code">
-                        <?php endif; ?>
                         <form method="POST" class="mt-4">
                             <label for="otp_code">Enter OTP from your Authenticator app:</label>
                             <input type="text" name="otp_code" id="otp_code" class="form-control" required>
@@ -173,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
