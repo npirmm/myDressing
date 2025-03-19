@@ -57,10 +57,12 @@ CREATE TABLE articles (
     created_by INT,
     owner_id INT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    main_photo_id INT DEFAULT NULL,
     FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (brand_id) REFERENCES brands(id),
     FOREIGN KEY (storage_location_id) REFERENCES storage_locations(id),
-    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+    FOREIGN KEY (main_photo_id) REFERENCES article_photos(id)
 );
 
 CREATE TABLE article_photos (

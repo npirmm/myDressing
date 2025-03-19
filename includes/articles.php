@@ -15,8 +15,19 @@ function addArticle($data) {
 // Récupérer tous les articles
 function getArticles() {
     global $db;
-    $sql = "SELECT * FROM articles";
+    $sql = "
+        SELECT 
+            a.*, 
+            (SELECT photo_name FROM article_photos WHERE id = a.main_photo_id) AS thumbnail
+        FROM articles a
+    ";
     return $db->fetchAll($sql);
+}
+
+function updateMainPhoto($articleId, $photoId) {
+    global $db;
+    $sql = "UPDATE articles SET main_photo_id = :photoId WHERE id = :articleId";
+    $db->executeQuery($sql, ['photoId' => $photoId, 'articleId' => $articleId]);
 }
 
 // Supprimer un article

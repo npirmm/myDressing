@@ -54,7 +54,7 @@ $userRole = $auth->getUserRole();
                     <div class="card-body">
                         <h5 class="card-title">Manage Articles</h5>
                         <p class="card-text">Add, edit, and delete articles in your wardrobe.</p>
-                        <a href="#" class="btn btn-primary">Go to Articles</a>
+                        <a href="articles.php" class="btn btn-primary">Go to Articles</a>
                     </div>
                 </div>
             </div>
