@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/db.php';
 require_once 'includes/auth.php';
-require_once 'includes/otp.php';
+require_once 'includes/2fa.php';
 
 session_start();
 
@@ -12,21 +12,11 @@ if (!isset($_SESSION['user_id'])) {
 
 $db = new Database();
 $auth = new Auth();
-$otp = new OTP();
+$twoFactorAuth = new TwoFactorAuth();
 
 $user_id = $_SESSION['user_id'];
 $user = $db->fetch("SELECT * FROM users WHERE id = :id", ['id' => $user_id]);
 $qrCodeImage = null;
-
-$is2FAEnabled = $auth->is2FAEnabled($user_id); // Check if 2FA is enabled
-$otpSecret = null;
-$qrCodeUrl = null;
-
-if (!$is2FAEnabled) {
-    $otpSecret = $otp->generateSecret();
-    $qrCodeUrl = $otp->getQRCodeUrl('MyDressing', $otpSecret);
-    $_SESSION['otp_secret'] = $otpSecret; // Store secret temporarily
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_email'])) {
@@ -50,11 +40,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['enable_2fa'])) {
-        if (!$is2FAEnabled && isset($_SESSION['otp_secret'])) {
-            $auth->enable2FA($user_id, $_SESSION['otp_secret']);
-            unset($_SESSION['otp_secret']);
-            header('Location: profile.php');
-            exit();
+        $method = $_POST['2fa_method'];
+        if ($method === 'otp') {
+            $secret = $twoFactorAuth->generateOTPSecret();
+            $db->executeQuery("UPDATE users SET 2fa_enabled = 1, 2fa_method = 'otp', 2fa_secret = :secret WHERE id = :id", [
+                'secret' => $secret,
+                'id' => $user_id
+            ]);
+            $user['2fa_enabled'] = 1;
+            $user['2fa_method'] = 'otp';
+            $user['2fa_secret'] = $secret;
+            $qrCodeImage = $twoFactorAuth->getQRCodeImage($user['username'], $secret);
+            echo "<script>alert('2FA enabled with OTP.');</script>";
+        } elseif ($method === 'email') {
+            $db->executeQuery("UPDATE users SET 2fa_enabled = 1, 2fa_method = 'email' WHERE id = :id", [
+                'id' => $user_id
+            ]);
+            $user['2fa_enabled'] = 1;
+            $user['2fa_method'] = 'email';
+            echo "<script>alert('2FA enabled with Email.');</script>";
         }
     }
 
@@ -70,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['test_otp'])) {
         $enteredCode = $_POST['otp_code'];
-        $isValid = $otp->verifyCode($user['2fa_secret'], $enteredCode);
+        $isValid = $twoFactorAuth->verifyOTP($user['2fa_secret'], $enteredCode);
         if ($isValid) {
             echo '<p class="text-success">OTP is valid!</p>';
         } else {
@@ -84,7 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 }
+
+$is2FAEnabled = $user['2fa_enabled'] == 1;
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -133,10 +140,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <option value="email" <?php echo $user['2fa_method'] === 'email' ? 'selected' : ''; ?>>Email</option>
                         </select>
                     </div>
-                    <button type="submit" name="enable_2fa" class="btn btn-primary" 
-                        <?php echo $is2FAEnabled ? 'disabled' : ''; ?>>Enable 2FA</button>
-                    <button type="submit" name="disable_2fa" class="btn btn-danger" 
-                        <?php echo !$is2FAEnabled ? 'disabled' : ''; ?>>Disable 2FA</button>
+                    <button type="submit" name="enable_2fa" class="btn btn-primary">Enable 2FA</button>
+                    <button type="submit" name="disable_2fa" class="btn btn-danger">Disable 2FA</button>
                 </form>
                 <div>
                     <h3>Two-Factor Authentication (2FA)</h3>
@@ -145,17 +150,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="checkbox" disabled <?= $is2FAEnabled ? 'checked' : '' ?>>
                     </label>
                     <?php if (!$is2FAEnabled): ?>
-                        <h6>OTP Secret</h6>
-                        <p><strong><?php echo htmlspecialchars($otpSecret); ?></strong></p>
-                        <h6>OTP QR Code</h6>
                         <p>Scan this QR code to enable 2FA:</p>
-                        <img src="<?= htmlspecialchars($qrCodeUrl); ?>" alt="QR Code">
+                        <img src="<?= $qrCodeImage ?>" alt="QR Code">
                     <?php else: ?>
                         <p>2FA is enabled for your account.</p>
                     <?php endif; ?>
                 </div>
                 <?php if ($user['2fa_method'] === 'otp' && $user['2fa_secret']): ?>
                     <div class="mt-4">
+                        <h6>OTP Secret</h6>
+                        <?php if (!$is2FAEnabled): ?>
+                            <p><strong><?php echo $user['2fa_secret']; ?></strong></p>
+                        <?php endif; ?>
+                        <h6>OTP QR Code</h6>
+                        <?php if ($qrCodeImage): ?>
+                            <img src="<?php echo $qrCodeImage; ?>" alt="QR Code">
+                        <?php endif; ?>
                         <form method="POST" class="mt-4">
                             <label for="otp_code">Enter OTP from your Authenticator app:</label>
                             <input type="text" name="otp_code" id="otp_code" class="form-control" required>
@@ -167,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
