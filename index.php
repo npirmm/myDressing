@@ -2,7 +2,9 @@
 require_once 'includes/db.php';
 require_once 'includes/auth.php';
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 if (isset($_SESSION['user_id'])) {
     header('Location: dashboard.php');
@@ -13,23 +15,21 @@ $auth = new Auth();
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
+    $usernameOrEmail = $_POST['usernameOrEmail'];
     $password = $_POST['password'];
+    $otp = $_POST['otp'] ?? null;
 
-    $result = $auth->login($username, $password);
+    $result = $auth->login($usernameOrEmail, $password, $otp);
 
-    if ($result['status']) {
-        if ($auth->is2FAEnabled()) {
-            $_SESSION['pending_otp_user_id'] = $result['user_id'];
-            header('Location: otp_verification.php');
-            exit();
-        }
+    if ($result['success']) {
         header('Location: dashboard.php');
         exit();
     } else {
         $error = $result['message'];
     }
 }
+
+$status = $_SESSION['status'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -52,14 +52,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endif; ?>
                         <form method="POST" action="index.php" class="needs-validation" novalidate>
                             <div class="form-group">
-                                <label for="username">Email or Username</label>
-                                <input type="text" class="form-control" id="username" name="username" required>
+                                <label for="usernameOrEmail">Email or Username</label>
+                                <input type="text" class="form-control" id="usernameOrEmail" name="usernameOrEmail" required>
                                 <div class="invalid-feedback">Please enter your email or username.</div>
                             </div>
                             <div class="form-group">
                                 <label for="password">Password</label>
                                 <input type="password" class="form-control" id="password" name="password" required>
                                 <div class="invalid-feedback">Please enter your password.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="otp">OTP (if enabled)</label>
+                                <input type="text" class="form-control" id="otp" name="otp">
                             </div>
                             <button type="submit" class="btn btn-primary btn-block">Login</button>
                         </form>

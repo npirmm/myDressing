@@ -24,9 +24,12 @@ class Auth {
                 }
             }
 
-            session_start();
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
+            $_SESSION['status'] = 'authenticated'; // Set session status
             return ['success' => true, 'message' => 'Authentication successful.'];
         }
 
@@ -34,12 +37,16 @@ class Auth {
     }
 
     public function checkRole($requiredRole) {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         return isset($_SESSION['role']) && $_SESSION['role'] === $requiredRole;
     }
 
     public function logout() {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         session_destroy();
     }
 
