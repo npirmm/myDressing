@@ -2,6 +2,7 @@
 require_once 'includes/db.php';
 require_once 'includes/auth.php';
 require_once 'includes/2fa.php';
+require_once 'includes/otp.php';
 
 session_start();
 
@@ -13,10 +14,21 @@ if (!isset($_SESSION['user_id'])) {
 $db = new Database();
 $auth = new Auth();
 $twoFactorAuth = new TwoFactorAuth();
+$otp = new OTP();
 
 $user_id = $_SESSION['user_id'];
 $user = $db->fetch("SELECT * FROM users WHERE id = :id", ['id' => $user_id]);
 $qrCodeImage = null;
+
+$is2FAEnabled = $auth->is2FAEnabled($user_id); // Check if 2FA is enabled
+$otpSecret = null;
+$qrCodeUrl = null;
+
+if (!$is2FAEnabled) {
+    $otpSecret = $otp->generateSecret();
+    $qrCodeUrl = $otp->getQRCodeUrl('MyDressing', $otpSecret);
+    $_SESSION['otp_secret'] = $otpSecret; // Store secret temporarily
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_email'])) {
@@ -40,25 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['enable_2fa'])) {
-        $method = $_POST['2fa_method'];
-        if ($method === 'otp') {
-            $secret = $twoFactorAuth->generateOTPSecret();
-            $db->executeQuery("UPDATE users SET 2fa_enabled = 1, 2fa_method = 'otp', 2fa_secret = :secret WHERE id = :id", [
-                'secret' => $secret,
-                'id' => $user_id
-            ]);
-            $user['2fa_enabled'] = 1;
-            $user['2fa_method'] = 'otp';
-            $user['2fa_secret'] = $secret;
-            $qrCodeImage = $twoFactorAuth->getQRCodeImage($user['username'], $secret);
-            echo "<script>alert('2FA enabled with OTP.');</script>";
-        } elseif ($method === 'email') {
-            $db->executeQuery("UPDATE users SET 2fa_enabled = 1, 2fa_method = 'email' WHERE id = :id", [
-                'id' => $user_id
-            ]);
-            $user['2fa_enabled'] = 1;
-            $user['2fa_method'] = 'email';
-            echo "<script>alert('2FA enabled with Email.');</script>";
+        if (!$is2FAEnabled && isset($_SESSION['otp_secret'])) {
+            $auth->enable2FA($user_id, $_SESSION['otp_secret']);
+            unset($_SESSION['otp_secret']);
+            header('Location: profile.php');
+            exit();
         }
     }
 
@@ -88,8 +86,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 }
-
-$is2FAEnabled = $user['2fa_enabled'] == 1;
 ?>
 
 <!DOCTYPE html>
@@ -151,7 +147,7 @@ $is2FAEnabled = $user['2fa_enabled'] == 1;
                     </label>
                     <?php if (!$is2FAEnabled): ?>
                         <p>Scan this QR code to enable 2FA:</p>
-                        <img src="<?= $qrCodeImage ?>" alt="QR Code">
+                        <img src="<?= $qrCodeUrl ?>" alt="QR Code">
                     <?php else: ?>
                         <p>2FA is enabled for your account.</p>
                     <?php endif; ?>
