@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once 'includes/auth.php';
-require_once 'includes/articles.php';
+require_once 'includes/articles-functions.php';
 
 $auth = new Auth();
 if (!$auth->isLoggedIn()) {
