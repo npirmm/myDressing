@@ -1,54 +1,9 @@
 <?php
 require_once 'includes/db.php';
-
-class Logs {
-    private $db;
-
-    public function __construct() {
-        $this->db = new Database();
-    }
-
-    // Function to add a log entry
-    public function addLog($user_id, $action, $details) {
-        $query = "INSERT INTO logs (user_id, action, details, created_at) VALUES (:user_id, :action, :details, NOW())";
-        return $this->db->executeQuery($query, [
-            'user_id' => $user_id,
-            'action' => $action,
-            'details' => $details
-        ]);
-    }
-
-    // Function to retrieve all logs
-    public function getAllLogs() {
-        $query = "SELECT * FROM logs ORDER BY created_at DESC";
-        return $this->db->fetchAll($query);
-    }
-
-    // Function to retrieve logs by user
-    public function getLogsByUser($user_id) {
-        $query = "SELECT * FROM logs WHERE user_id = :user_id ORDER BY created_at DESC";
-        return $this->db->fetchAll($query, ['user_id' => $user_id]);
-    }
-
-    // Function to retrieve logs by action
-    public function getLogsByAction($action) {
-        $query = "SELECT * FROM logs WHERE action = :action ORDER BY created_at DESC";
-        return $this->db->fetchAll($query, ['action' => $action]);
-    }
-
-    // Function to retrieve logs by date range
-    public function getLogsByDateRange($start_date, $end_date) {
-        $query = "SELECT * FROM logs WHERE created_at BETWEEN :start_date AND :end_date ORDER BY created_at DESC";
-        return $this->db->fetchAll($query, [
-            'start_date' => $start_date,
-            'end_date' => $end_date
-        ]);
-    }
-}
-
-// Display logs for admin
-session_start();
 require_once 'includes/auth.php';
+require_once 'includes/logs.php';
+
+session_start();
 
 $auth = new Auth();
 if (!$auth->isLoggedIn() || $auth->getUserRole() !== 'admin') {
@@ -57,9 +12,26 @@ if (!$auth->isLoggedIn() || $auth->getUserRole() !== 'admin') {
 }
 
 $logs = new Logs();
-$allLogs = $logs->getAllLogs();
+$filters = [];
 
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (!empty($_GET['user_id'])) {
+        $filters['user_id'] = $_GET['user_id'];
+    }
+    if (!empty($_GET['action'])) {
+        $filters['action'] = $_GET['action'];
+    }
+    if (!empty($_GET['date_from'])) {
+        $filters['date_from'] = $_GET['date_from'];
+    }
+    if (!empty($_GET['date_to'])) {
+        $filters['date_to'] = $_GET['date_to'];
+    }
+}
+
+$logEntries = $logs->getLogs($filters);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -90,26 +62,52 @@ $allLogs = $logs->getAllLogs();
         </div>
     </nav>
     <div class="container mt-5">
-        <h1>Logs</h1>
-        <table class="table table-striped">
+        <h1 class="mb-4">Logs</h1>
+        <form method="GET" class="mb-4">
+            <div class="form-row">
+                <div class="col">
+                    <input type="text" name="user_id" class="form-control" placeholder="User ID" value="<?php echo htmlspecialchars($_GET['user_id'] ?? ''); ?>">
+                </div>
+                <div class="col">
+                    <select name="action" class="form-control">
+                        <option value="">All Actions</option>
+                        <option value="login" <?php echo ($_GET['action'] ?? '') === 'login' ? 'selected' : ''; ?>>Login</option>
+                        <option value="logout" <?php echo ($_GET['action'] ?? '') === 'logout' ? 'selected' : ''; ?>>Logout</option>
+                        <option value="add" <?php echo ($_GET['action'] ?? '') === 'add' ? 'selected' : ''; ?>>Add</option>
+                        <option value="modify" <?php echo ($_GET['action'] ?? '') === 'modify' ? 'selected' : ''; ?>>Modify</option>
+                        <option value="delete" <?php echo ($_GET['action'] ?? '') === 'delete' ? 'selected' : ''; ?>>Delete</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <input type="date" name="date_from" class="form-control" value="<?php echo htmlspecialchars($_GET['date_from'] ?? ''); ?>">
+                </div>
+                <div class="col">
+                    <input type="date" name="date_to" class="form-control" value="<?php echo htmlspecialchars($_GET['date_to'] ?? ''); ?>">
+                </div>
+                <div class="col">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                </div>
+            </div>
+        </form>
+        <table class="table table-bordered">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>User ID</th>
+                    <th>User</th>
                     <th>Action</th>
                     <th>Details</th>
-                    <th>Created At</th>
+                    <th>Date</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($allLogs as $log): ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($log['id']); ?></td>
-                    <td><?php echo htmlspecialchars($log['user_id']); ?></td>
-                    <td><?php echo htmlspecialchars($log['action']); ?></td>
-                    <td><?php echo htmlspecialchars($log['details']); ?></td>
-                    <td><?php echo htmlspecialchars($log['created_at']); ?></td>
-                </tr>
+                <?php foreach ($logEntries as $log): ?>
+                    <tr>
+                        <td><?php echo $log['id']; ?></td>
+                        <td><?php echo htmlspecialchars($log['username'] ?? 'Unknown'); ?></td>
+                        <td><?php echo htmlspecialchars($log['action']); ?></td>
+                        <td><?php echo htmlspecialchars($log['details']); ?></td>
+                        <td><?php echo htmlspecialchars($log['created_at']); ?></td>
+                    </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>

@@ -16,6 +16,7 @@ $twoFactorAuth = new TwoFactorAuth();
 
 $user_id = $_SESSION['user_id'];
 $user = $db->fetch("SELECT * FROM users WHERE id = :id", ['id' => $user_id]);
+$qrCodeImage = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_email'])) {
@@ -25,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => $user_id
         ]);
         $user['email'] = $new_email;
+        echo "<script>alert('Email updated successfully.');</script>";
     }
 
     if (isset($_POST['update_password'])) {
@@ -34,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'password' => $hashedPassword,
             'id' => $user_id
         ]);
+        echo "<script>alert('Password updated successfully.');</script>";
     }
 
     if (isset($_POST['enable_2fa'])) {
@@ -47,12 +50,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user['2fa_enabled'] = 1;
             $user['2fa_method'] = 'otp';
             $user['2fa_secret'] = $secret;
+            $qrCodeImage = $twoFactorAuth->getQRCodeImage($user['username'], $secret);
+            echo "<script>alert('2FA enabled with OTP.');</script>";
         } elseif ($method === 'email') {
             $db->executeQuery("UPDATE users SET 2fa_enabled = 1, 2fa_method = 'email' WHERE id = :id", [
                 'id' => $user_id
             ]);
             $user['2fa_enabled'] = 1;
             $user['2fa_method'] = 'email';
+            echo "<script>alert('2FA enabled with Email.');</script>";
         }
     }
 
@@ -63,8 +69,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user['2fa_enabled'] = 0;
         $user['2fa_method'] = NULL;
         $user['2fa_secret'] = NULL;
+        echo "<script>alert('2FA disabled.');</script>";
+    }
+
+    if (isset($_POST['test_otp'])) {
+        $enteredCode = $_POST['otp_code'];
+        $isValid = $twoFactorAuth->verifyOTP($user['2fa_secret'], $enteredCode);
+        if ($isValid) {
+            echo '<p class="text-success">OTP is valid!</p>';
+        } else {
+            echo '<p class="text-danger">Invalid OTP. Please try again.</p>';
+        }
+    }
+
+    if (isset($_POST['logout'])) {
+        session_destroy();
+        header('Location: index.php');
+        exit();
     }
 }
+
+$is2FAEnabled = $user['2fa_enabled'] == 1;
 ?>
 
 <!DOCTYPE html>
@@ -74,41 +99,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <div class="container">
-        <h1>User Profile</h1>
-        <form method="POST">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
-                <button type="submit" name="update_email" class="btn btn-primary">Update Email</button>
+    <div class="container mt-5">
+        <a href="dashboard.php" class="btn btn-primary mb-4">Back to Dashboard</a>
+        <h1 class="mb-4">User Profile</h1>
+        <a href="dashboard.php" class="btn btn-primary mb-4">Back to Dashboard</a>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Update Email</h5>
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                    </div>
+                    <button type="submit" name="update_email" class="btn btn-primary">Update Email</button>
+                </form>
             </div>
-        </form>
-        <form method="POST">
-            <div class="form-group">
-                <label for="password">New Password</label>
-                <input type="password" class="form-control" id="password" name="password" required>
-                <button type="submit" name="update_password" class="btn btn-primary">Update Password</button>
+        </div>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Update Password</h5>
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="password">New Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" name="update_password" class="btn btn-primary">Update Password</button>
+                </form>
             </div>
-        </form>
-        <form method="POST">
-            <div class="form-group">
-                <label for="2fa_method">Two-Factor Authentication</label>
-                <select class="form-control" id="2fa_method" name="2fa_method" required>
-                    <option value="otp" <?php echo $user['2fa_method'] === 'otp' ? 'selected' : ''; ?>>OTP</option>
-                    <option value="email" <?php echo $user['2fa_method'] === 'email' ? 'selected' : ''; ?>>Email</option>
-                </select>
-                <button type="submit" name="enable_2fa" class="btn btn-primary">Enable 2FA</button>
-                <button type="submit" name="disable_2fa" class="btn btn-danger">Disable 2FA</button>
+        </div>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Two-Factor Authentication</h5>
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="2fa_method">2FA Method</label>
+                        <select class="form-control" id="2fa_method" name="2fa_method" required>
+                            <option value="otp" <?php echo $user['2fa_method'] === 'otp' ? 'selected' : ''; ?>>OTP</option>
+                            <option value="email" <?php echo $user['2fa_method'] === 'email' ? 'selected' : ''; ?>>Email</option>
+                        </select>
+                    </div>
+                    <button type="submit" name="enable_2fa" class="btn btn-primary">Enable 2FA</button>
+                    <button type="submit" name="disable_2fa" class="btn btn-danger">Disable 2FA</button>
+                </form>
+                <div>
+                    <h3>Two-Factor Authentication (2FA)</h3>
+                    <label>
+                        2FA Status:
+                        <input type="checkbox" disabled <?= $is2FAEnabled ? 'checked' : '' ?>>
+                    </label>
+                    <?php if (!$is2FAEnabled): ?>
+                        <p>Scan this QR code to enable 2FA:</p>
+                        <img src="<?= $qrCodeImage ?>" alt="QR Code">
+                    <?php else: ?>
+                        <p>2FA is enabled for your account.</p>
+                    <?php endif; ?>
+                </div>
+                <?php if ($user['2fa_method'] === 'otp' && $user['2fa_secret']): ?>
+                    <div class="mt-4">
+                        <h6>OTP Secret</h6>
+                        <p><strong><?php echo $user['2fa_secret']; ?></strong></p>
+                        <h6>OTP QR Code</h6>
+                        <?php if ($qrCodeImage): ?>
+                            <img src="<?php echo $qrCodeImage; ?>" alt="QR Code">
+                        <?php endif; ?>
+                        <form method="POST" class="mt-4">
+                            <label for="otp_code">Enter OTP from your Authenticator app:</label>
+                            <input type="text" name="otp_code" id="otp_code" class="form-control" required>
+                            <button type="submit" name="test_otp" class="btn btn-primary mt-2">Test OTP</button>
+                        </form>
+                    </div>
+                <?php endif; ?>
             </div>
-        </form>
-        <?php if ($user['2fa_method'] === 'otp' && $user['2fa_secret']): ?>
-            <div class="form-group">
-                <label for="otp_qr">OTP QR Code</label>
-                <img src="<?php echo $twoFactorAuth->getQRCodeURL($user['username'], $user['2fa_secret']); ?>" alt="OTP QR Code">
-            </div>
-        <?php endif; ?>
+        </div>
     </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

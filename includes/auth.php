@@ -8,21 +8,28 @@ class Auth {
         $this->db = new Database();
     }
 
-    public function login($usernameOrEmail, $password) {
-        $query = "SELECT id, password, role FROM users WHERE username = :username OR email = :email";
+    public function login($usernameOrEmail, $password, $otp = null) {
+        $query = "SELECT id, password, role, 2fa_enabled, 2fa_method, 2fa_secret FROM users WHERE username = :username OR email = :email";
         $user = $this->db->fetch($query, [
             'username' => $usernameOrEmail,
             'email' => $usernameOrEmail
         ]);
 
         if ($user && password_verify($password, $user['password'])) {
+            if ($user['2fa_enabled'] && $user['2fa_method'] === 'otp') {
+                $twoFactorAuth = new TwoFactorAuth();
+                if (!$otp || !$twoFactorAuth->verifyOTP($user['2fa_secret'], $otp)) {
+                    return ['success' => false, 'message' => 'Invalid OTP.'];
+                }
+            }
+
             session_start();
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
-            return true;
+            return ['success' => true, 'message' => 'Authentication successful.'];
         }
 
-        return false;
+        return ['success' => false, 'message' => 'Invalid username or password.'];
     }
 
     public function checkRole($requiredRole) {

@@ -13,10 +13,6 @@ if (!$auth->isLoggedIn()) {
 // Get user role
 $userRole = $auth->getUserRole();
 
-// Log user access to dashboard
-$logs = new Logs();
-$logs->addLog($_SESSION['user_id'], 'Accessed Dashboard', 'User accessed the dashboard page.');
-
 ?>
 <!DOCTYPE html>
 <html lang="en">

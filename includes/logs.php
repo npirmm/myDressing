@@ -18,30 +18,39 @@ class Logs {
     }
 
     public function getLogs($filters = []) {
-        $query = "SELECT * FROM logs WHERE 1=1";
+        $query = "SELECT logs.*, users.username FROM logs LEFT JOIN users ON logs.user_id = users.id WHERE 1=1";
         $params = [];
 
-        if (isset($filters['user_id'])) {
-            $query .= " AND user_id = :userId";
+        if (!empty($filters['user_id'])) {
+            $query .= " AND logs.user_id = :userId";
             $params['userId'] = $filters['user_id'];
         }
 
-        if (isset($filters['action'])) {
-            $query .= " AND action = :action";
+        if (!empty($filters['action'])) {
+            $query .= " AND logs.action = :action";
             $params['action'] = $filters['action'];
         }
 
-        if (isset($filters['date_from'])) {
-            $query .= " AND created_at >= :dateFrom";
+        if (!empty($filters['date_from'])) {
+            $query .= " AND logs.created_at >= :dateFrom";
             $params['dateFrom'] = $filters['date_from'];
         }
 
-        if (isset($filters['date_to'])) {
-            $query .= " AND created_at <= :dateTo";
+        if (!empty($filters['date_to'])) {
+            $query .= " AND logs.created_at <= :dateTo";
             $params['dateTo'] = $filters['date_to'];
         }
 
         return $this->db->fetchAll($query, $params);
+    }
+
+    public function addLog($userId, $action, $description) {
+        // Example implementation: Log to a database or a file
+        $timestamp = date('Y-m-d H:i:s');
+        $logEntry = "[$timestamp] User ID: $userId | Action: $action | Description: $description\n";
+
+        // Append log to a file (logs.txt)
+        file_put_contents('logs.txt', $logEntry, FILE_APPEND);
     }
 }
 ?>

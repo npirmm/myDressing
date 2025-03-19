@@ -1,23 +1,36 @@
 <?php
-session_start();
 require_once 'includes/db.php';
 require_once 'includes/auth.php';
 
-$auth = new Auth();
+session_start();
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $identifier = $_POST['identifier'];
+if (isset($_SESSION['user_id'])) {
+    header('Location: dashboard.php');
+    exit();
+}
+
+$auth = new Auth();
+$error = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = $_POST['username'];
     $password = $_POST['password'];
 
-    if ($auth->login($identifier, $password)) {
+    $result = $auth->login($username, $password);
+
+    if ($result['status']) {
+        if ($auth->is2FAEnabled()) {
+            $_SESSION['pending_otp_user_id'] = $result['user_id'];
+            header('Location: otp_verification.php');
+            exit();
+        }
         header('Location: dashboard.php');
         exit();
     } else {
-        $error = "Invalid login credentials.";
+        $error = $result['message'];
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <?php endif; ?>
                         <form method="POST" action="index.php" class="needs-validation" novalidate>
                             <div class="form-group">
-                                <label for="identifier">Email or Username</label>
-                                <input type="text" class="form-control" id="identifier" name="identifier" required>
+                                <label for="username">Email or Username</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
                                 <div class="invalid-feedback">Please enter your email or username.</div>
                             </div>
                             <div class="form-group">

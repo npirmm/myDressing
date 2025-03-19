@@ -1,30 +1,58 @@
 <?php
+if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    die('Error: Composer dependencies are not installed. Please run "composer install".');
+}
+
+require_once __DIR__ . '/../vendor/autoload.php';
 require_once 'db.php';
-require_once 'vendor/autoload.php'; // Assuming you are using a library like PHPGangsta/GoogleAuthenticator
+
+use OTPHP\TOTP;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 
 class TwoFactorAuth {
     private $db;
+    private $timezone;
 
     public function __construct() {
         $this->db = new Database();
+        $this->timezone = new DateTimeZone('Europe/Brussels');
     }
 
     // Function to generate OTP secret
     public function generateOTPSecret() {
-        $g = new \Google\Authenticator\GoogleAuthenticator();
-        return $g->generateSecret();
+        return TOTP::create()->getSecret();
     }
 
     // Function to get QR code URL for OTP
     public function getQRCodeURL($username, $secret) {
-        $g = new \Google\Authenticator\GoogleAuthenticator();
-        return $g->getQRCodeGoogleUrl($username, $secret);
+        $totp = TOTP::create($secret);
+        $totp->setLabel($username);
+        return $totp->getProvisioningUri();
+    }
+
+    // Function to get QR code image for OTP
+    public function getQRCodeImage($username, $secret) {
+        $totp = TOTP::create($secret);
+        $totp->setLabel($username);
+        $totp->setIssuer('MyDressing');
+        $provisioningUri = $totp->getProvisioningUri();
+
+        $qrCode = QrCode::create($provisioningUri);
+        $writer = new PngWriter();
+        $result = $writer->write($qrCode);
+
+        // Return the QR code as a base64-encoded image
+        return 'data:image/png;base64,' . base64_encode($result->getString());
     }
 
     // Function to verify OTP code
     public function verifyOTP($secret, $code) {
-        $g = new \Google\Authenticator\GoogleAuthenticator();
-        return $g->verifyCode($secret, $code, 2); // 2 = 2*30sec clock tolerance
+        $totp = TOTP::create($secret);
+        $totp->setLabel('MyDressing');
+        $totp->setIssuer('MyDressing');
+        $totp->setTimezone($this->timezone); // Set timezone to Brussels/Europe
+        return $totp->verify($code);
     }
 
     // Function to send 2FA code via email
