@@ -53,11 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qrCodeImage = $twoFactorAuth->getQRCodeImage($user['username'], $secret);
             echo "<script>alert('2FA enabled with OTP.');</script>";
         } elseif ($method === 'email') {
-            $db->executeQuery("UPDATE users SET 2fa_enabled = 1, 2fa_method = 'email' WHERE id = :id", [
+            $db->executeQuery("UPDATE users SET 2fa_enabled = 1, 2fa_method = 'email', 2fa_secret = NULL WHERE id = :id", [
                 'id' => $user_id
             ]);
             $user['2fa_enabled'] = 1;
             $user['2fa_method'] = 'email';
+            $user['2fa_secret'] = NULL;
             echo "<script>alert('2FA enabled with Email.');</script>";
         }
     }
@@ -149,30 +150,31 @@ $is2FAEnabled = $user['2fa_enabled'] == 1;
                         2FA Status:
                         <input type="checkbox" disabled <?= $is2FAEnabled ? 'checked' : '' ?>>
                     </label>
-                    <?php if (!$is2FAEnabled): ?>
-                        <p>Scan this QR code to enable 2FA:</p>
-                        <img src="<?= $qrCodeImage ?>" alt="QR Code">
-                    <?php else: ?>
+                    <?php if ($is2FAEnabled): ?>
                         <p>2FA is enabled for your account.</p>
+                        <?php if ($user['2fa_method'] === 'otp' && $user['2fa_secret']): ?>
+                            <div class="mt-4">
+                                <h6>OTP Secret</h6>
+                                <p><strong><?php echo htmlspecialchars($user['2fa_secret']); ?></strong></p>
+                                <h6>OTP QR Code</h6>
+                                <?php if ($qrCodeImage): ?>
+                                    <img src="<?php echo htmlspecialchars($qrCodeImage); ?>" alt="QR Code">
+                                <?php endif; ?>
+                                <form method="POST" class="mt-4">
+                                    <label for="otp_code">Enter OTP from your Authenticator app:</label>
+                                    <input type="text" name="otp_code" id="otp_code" class="form-control" required>
+                                    <button type="submit" name="test_otp" class="btn btn-primary mt-2">Test OTP</button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <p>2FA is not enabled for your account.</p>
+                        <?php if ($qrCodeImage): ?>
+                            <p>Scan this QR code to enable 2FA:</p>
+                            <img src="<?php echo htmlspecialchars($qrCodeImage); ?>" alt="QR Code">
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
-                <?php if ($user['2fa_method'] === 'otp' && $user['2fa_secret']): ?>
-                    <div class="mt-4">
-                        <h6>OTP Secret</h6>
-                        <?php if (!$is2FAEnabled): ?>
-                            <p><strong><?php echo $user['2fa_secret']; ?></strong></p>
-                        <?php endif; ?>
-                        <h6>OTP QR Code</h6>
-                        <?php if ($qrCodeImage): ?>
-                            <img src="<?php echo $qrCodeImage; ?>" alt="QR Code">
-                        <?php endif; ?>
-                        <form method="POST" class="mt-4">
-                            <label for="otp_code">Enter OTP from your Authenticator app:</label>
-                            <input type="text" name="otp_code" id="otp_code" class="form-control" required>
-                            <button type="submit" name="test_otp" class="btn btn-primary mt-2">Test OTP</button>
-                        </form>
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
     </div>
