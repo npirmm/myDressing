@@ -105,7 +105,6 @@ $is2FAEnabled = $user['2fa_enabled'] == 1;
     <div class="container mt-5">
         <a href="dashboard.php" class="btn btn-primary mb-4">Back to Dashboard</a>
         <h1 class="mb-4">User Profile</h1>
-        <a href="dashboard.php" class="btn btn-primary mb-4">Back to Dashboard</a>
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title">Update Email</h5>
@@ -160,7 +159,9 @@ $is2FAEnabled = $user['2fa_enabled'] == 1;
                 <?php if ($user['2fa_method'] === 'otp' && $user['2fa_secret']): ?>
                     <div class="mt-4">
                         <h6>OTP Secret</h6>
-                        <p><strong><?php echo $user['2fa_secret']; ?></strong></p>
+                        <?php if (!$is2FAEnabled): ?>
+                            <p><strong><?php echo $user['2fa_secret']; ?></strong></p>
+                        <?php endif; ?>
                         <h6>OTP QR Code</h6>
                         <?php if ($qrCodeImage): ?>
                             <img src="<?php echo $qrCodeImage; ?>" alt="QR Code">

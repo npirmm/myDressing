@@ -1,6 +1,6 @@
 <?php
 require_once 'db.php';
-require_once '2fa.php'; // Add this line
+require_once '2fa.php';
 
 class Auth {
     private $db;
@@ -20,6 +20,7 @@ class Auth {
             if ($user['2fa_enabled'] && $user['2fa_method'] === 'otp') {
                 $twoFactorAuth = new TwoFactorAuth();
                 if (!$otp || !$twoFactorAuth->verifyOTP($user['2fa_secret'], $otp)) {
+                    $this->logAction($usernameOrEmail, 'Failed login (Invalid OTP)');
                     return ['success' => false, 'message' => 'Invalid OTP.'];
                 }
             }
@@ -29,11 +30,19 @@ class Auth {
             }
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
-            $_SESSION['status'] = 'authenticated'; // Set session status
+            $_SESSION['status'] = 'authenticated';
+
+            $this->logAction($usernameOrEmail, 'Successful login');
             return ['success' => true, 'message' => 'Authentication successful.'];
         }
 
+        $this->logAction($usernameOrEmail, 'Failed login (Invalid credentials)');
         return ['success' => false, 'message' => 'Invalid username or password.'];
+    }
+
+    private function logAction($usernameOrEmail, $action) {
+        $logMessage = sprintf("[%s] %s: %s\n", date('Y-m-d H:i:s'), $usernameOrEmail, $action);
+        file_put_contents('logs/auth.log', $logMessage, FILE_APPEND);
     }
 
     public function checkRole($requiredRole) {
