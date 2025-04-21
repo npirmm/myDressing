@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Documentation</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1>Project Documentation</h1>
+    <p>This document provides an overview of the file structure and the purpose of each file in the repository.</p>
+
+    <h2>File Structure</h2>
+    <pre>
+    myDressing/
+    ├── dashboard.php
+    ├── includes/
+    │   ├── auth.php
+    │   ├── logs.php
+    │   └── db.php
+    ├── css/
+    │   └── styles.css
+    ├── articles.php
+    ├── search_articles.php
+    ├── add_article.php
+    ├── edit_article.php
+    └── documentation.html
+    </pre>
+
+    <h2>File Descriptions</h2>
+
+    <h3>dashboard.php</h3>
+    <p><strong>Role:</strong> The main dashboard page for the application.</p>
+    <p><strong>Input:</strong> User session data, user role (retrieved from <code>auth.php</code>).</p>
+    <p><strong>Output:</strong> Displays the dashboard with navigation links and cards for managing articles, events, and users (if the user is an admin).</p>
+
+    <h3>includes/auth.php</h3>
+    <p><strong>Role:</strong> Handles user authentication and role management.</p>
+    <p><strong>Input:</strong> User credentials, session data.</p>
+    <p><strong>Output:</strong> Provides methods to check login status and retrieve user roles.</p>
+
+    <h3>includes/logs.php</h3>
+    <p><strong>Role:</strong> Manages logging functionality for the application.</p>
+    <p><strong>Input:</strong> Log messages and events.</p>
+    <p><strong>Output:</strong> Writes logs to a file or database for auditing purposes.</p>
+
+    <h3>includes/db.php</h3>
+    <p><strong>Role:</strong> Provides database connection and query execution functionality.</p>
+    <p><strong>Input:</strong> SQL queries and parameters.</p>
+    <p><strong>Output:</strong> Executes queries and returns results.</p>
+
+    <h3>css/styles.css</h3>
+    <p><strong>Role:</strong> Contains custom styles for the application.</p>
+    <p><strong>Input:</strong> None.</p>
+    <p><strong>Output:</strong> Provides styling for HTML elements.</p>
+
+    <h3>articles.php</h3>
+    <p><strong>Role:</strong> Displays a list of articles and provides options to manage them.</p>
+    <p><strong>Input:</strong> Articles data from the database.</p>
+    <p><strong>Output:</strong> Renders a list of articles with options to add, edit, or delete.</p>
+
+    <h3>search_articles.php</h3>
+    <p><strong>Role:</strong> Allows users to search for articles by title.</p>
+    <p><strong>Input:</strong> Search keyword (via GET request).</p>
+    <p><strong>Output:</strong> Displays a list of articles matching the search keyword.</p>
+
+    <h3>add_article.php</h3>
+    <p><strong>Role:</strong> Provides a form to add new articles to the database.</p>
+    <p><strong>Input:</strong> Article title and description (via POST request).</p>
+    <p><strong>Output:</strong> Adds the new article to the database and redirects to <code>articles.php</code>.</p>
+
+    <h3>edit_article.php</h3>
+    <p><strong>Role:</strong> Provides a form to edit existing articles.</p>
+    <p><strong>Input:</strong> Article ID (via GET request), updated title and description (via POST request).</p>
+    <p><strong>Output:</strong> Updates the article in the database and redirects to <code>articles.php</code>.</p>
+
+    <h2>Notes</h2>
+    <ul>
+        <li>Ensure the database schema includes tables for users, articles, and logs.</li>
+        <li>Authentication and database connection are handled through the <code>auth.php</code> and <code>db.php</code> files, respectively.</li>
+        <li>Admin users have additional privileges, such as managing logs and users.</li>
+    </ul>
+</body>
+</html>
